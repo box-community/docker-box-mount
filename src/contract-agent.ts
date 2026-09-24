@@ -1,5 +1,4 @@
 import type { Sandbox } from "./sandbox.js";
-import { reviewContractWithBoxAi } from "./box.js";
 import type { DemoConfig } from "./config.js";
 import {
   REMOTE_MOUNT_PATH,
@@ -91,10 +90,6 @@ await writeFile(
 console.log(outputPath);
 `;
 
-export function reviewProvider(config: DemoConfig): "OpenAI" | "Box AI" {
-  return config.openaiApiKey ? "OpenAI" : "Box AI";
-}
-
 async function runOpenAiAgent(sandbox: Sandbox, model: string): Promise<string> {
   await sandbox.commands.run(
     `mkdir -p ${shellQuote(REMOTE_OPENAI_AGENT_PATH)}`,
@@ -131,41 +126,9 @@ async function runOpenAiAgent(sandbox: Sandbox, model: string): Promise<string> 
   return result.stdout.trim();
 }
 
-async function runBoxAiReview(
-  sandbox: Sandbox,
-  boxAccessToken: string,
-  boxFolderId: string,
-): Promise<string> {
-  const review = await reviewContractWithBoxAi(
-    boxAccessToken,
-    boxFolderId,
-  );
-
-  await sandbox.commands.run(
-    `mkdir -p ${shellQuote(`${REMOTE_MOUNT_PATH}/Reviewed`)}`,
-    { timeoutMs: 30_000 },
-  );
-
-  await sandbox.files.write(
-    REVIEW_OUTPUT_PATH,
-    `${review}\n\n---\n` +
-      "_AI-generated with Box AI for demonstration purposes. " +
-      "Qualified legal review is required._\n",
-  );
-
-  return REVIEW_OUTPUT_PATH;
-}
-
 export async function runContractAgent(
   sandbox: Sandbox,
   config: DemoConfig,
 ): Promise<string> {
-  if (config.openaiApiKey) {
-    return runOpenAiAgent(sandbox, config.openaiModel);
-  }
-  return runBoxAiReview(
-    sandbox,
-    config.boxAccessToken,
-    config.boxFolderId,
-  );
+  return runOpenAiAgent(sandbox, config.openaiModel);
 }

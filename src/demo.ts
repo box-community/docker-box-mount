@@ -2,7 +2,6 @@ import type { Sandbox } from "./sandbox.js";
 import { getDemoConfig } from "./config.js";
 import {
   REVIEW_OUTPUT_PATH,
-  reviewProvider,
 } from "./contract-agent.js";
 import { runReviewJob } from "./run-review-job.js";
 import {
@@ -80,15 +79,12 @@ async function main(): Promise<void> {
     mounted = true;
     console.log(await boxMountStatus(sandbox));
 
-    const provider = reviewProvider(config);
     console.log(
-      `${provider} is reviewing Acme-MSA.docx against the approved playbook...`,
+      "OpenAI is reviewing Acme-MSA.docx against the approved playbook...",
     );
-    if (provider === "OpenAI") {
-      console.log(
-        "The OpenAI review agent is running inside the Docker Sandbox.",
-      );
-    }
+    console.log(
+      "The OpenAI review agent is running inside the Docker Sandbox.",
+    );
     const { outputPath, taskAssignment } = await runReviewJob(
       sandbox,
       config,

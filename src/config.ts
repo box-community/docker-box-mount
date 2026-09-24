@@ -102,7 +102,7 @@ export function getDemoConfig(): DemoConfig {
     boxFolderId: required("BOX_FOLDER_ID"),
     boxReviewerUserId:
       process.env.BOX_REVIEWER_USER_ID?.trim() || "",
-    openaiApiKey: process.env.OPENAI_API_KEY?.trim() || "",
+    openaiApiKey: required("OPENAI_API_KEY"),
     openaiModel: process.env.OPENAI_MODEL?.trim() || "gpt-5.5",
     boxMountArchive: "",
   };

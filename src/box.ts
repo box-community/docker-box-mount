@@ -1,5 +1,4 @@
 import {
-  BoxApiError,
   BoxClient,
   BoxDeveloperTokenAuth,
 } from "box-node-sdk";
@@ -58,72 +57,6 @@ export async function validateBoxAccess(
     user: user.name ?? "current user",
     folder: `${folder.name ?? "Unnamed folder"} (${folder.id})`,
   };
-}
-
-export async function reviewContractWithBoxAi(
-  token: string,
-  rootFolderId: string,
-): Promise<string> {
-  const client = createBoxClient(token);
-  const incomingId = await childId(
-    client,
-    rootFolderId,
-    "Incoming",
-    "folder",
-  );
-  const playbookId = await childId(
-    client,
-    rootFolderId,
-    "Playbook",
-    "folder",
-  );
-  const contractId = await childId(
-    client,
-    incomingId,
-    "Acme-MSA.docx",
-    "file",
-  );
-  const approvedPlaybookId = await childId(
-    client,
-    playbookId,
-    "approved-contract-playbook.md",
-    "file",
-  );
-
-  try {
-    const response = await client.ai.createAiAsk({
-      mode: "multiple_item_qa",
-      items: [
-        { id: contractId, type: "file" },
-        { id: approvedPlaybookId, type: "file" },
-      ],
-      includeCitations: true,
-      prompt: [
-        "Act as a first-pass contract review assistant for a qualified enterprise legal team.",
-        "Compare Acme-MSA.docx against approved-contract-playbook.md.",
-        "Follow the playbook's review standard and required output.",
-        "Cite the agreement section for every finding and do not invent clauses.",
-        "Return a complete review memo in Markdown only.",
-      ].join(" "),
-    });
-
-    const answer = response?.answer.trim();
-    if (!answer) {
-      throw new Error("Box AI returned no review text.");
-    }
-    return answer;
-  } catch (error) {
-    if (
-      error instanceof BoxApiError &&
-      error.responseInfo.statusCode === 403
-    ) {
-      throw new Error(
-        "Box AI access was denied. Confirm that this Box account and app " +
-          "are entitled to use the Box AI API.",
-      );
-    }
-    throw error;
-  }
 }
 
 export async function assignReviewTask(

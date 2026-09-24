@@ -4,14 +4,14 @@
 
 [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) supplies the execution environment: an isolated microVM with its own filesystem and tools, managed through the `sbx` CLI.
 
-This demo brings them together to compare a synthetic MSA with an approved legal playbook and save a review memo back to Box. It uses Box AI by default, or an optional OpenAI reviewer running inside the sandbox.
+This demo brings them together to compare a synthetic MSA with an approved legal playbook and save a review memo back to Box. The OpenAI reviewer runs inside the sandbox, where it reads the mounted documents and writes the resulting memo.
 
 ## Prerequisites
 
 - An Ubuntu 24.04+ x86_64 host with KVM available and a sudo-capable account.
 - Node.js 20+ and npm.
 - A new, empty Box folder and its ID—the number at the end of its Box URL.
-- A Box Developer Token and Box AI API access, or an OpenAI API key.
+- A Box Developer Token and an OpenAI API key.
 - The Linux x86_64 Box Mount binary from the [Box Mount preview](https://developer.box.com/guides/box-mount).
 
 The steps below target Ubuntu, including a DigitalOcean droplet with nested virtualization. Environment checks and ARM instructions are in the [appendix](#appendix).
@@ -46,9 +46,9 @@ chmod 600 .env
 editor .env
 ```
 
-Fill in `BOX_ACCESS_TOKEN` and `BOX_FOLDER_ID`. Leave `OPENAI_API_KEY` blank to use Box AI.
+Fill in `BOX_ACCESS_TOKEN`, `BOX_FOLDER_ID`, and `OPENAI_API_KEY`. All three are required; missing values stop the command before it creates a sandbox.
 
-To use the OpenAI reviewer, set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in `.env`. To assign the resulting memo to a person, set `BOX_REVIEWER_USER_ID` to their Box user ID; otherwise, task assignment is skipped.
+Optionally set `OPENAI_MODEL` in `.env`. To assign the resulting memo to a person, set `BOX_REVIEWER_USER_ID` to their Box user ID; otherwise, task assignment is skipped.
 
 ### 3. Build the Box Mount template
 
@@ -73,7 +73,7 @@ sbx secret set box
 
 Paste the same Box token you put in `.env`. The host scripts read `.env` for Box API calls; Box Mount uses the secret registered with `sbx`. Editing `.env` does not populate the sandbox secret store.
 
-If you configured the OpenAI reviewer, also run:
+Register the required OpenAI key as well:
 
 ```bash
 sbx secret set openai
@@ -91,7 +91,7 @@ Run these steps in order from the project directory. Finish with teardown before
 npm run doctor
 ```
 
-This checks the local configuration and fixtures, Box account and folder access, and whether a temporary sandbox can execute Box Mount. When OpenAI is configured, it also checks authentication and access to the selected model.
+This checks the local configuration and fixtures, Box account and folder access, and whether a temporary sandbox can execute Box Mount. It also checks OpenAI authentication and access to the selected model.
 
 ### 2. Seed the Box folder
 
@@ -117,9 +117,9 @@ npm run demo
 
 The demo creates a sandbox from the template and kit, then mounts your Box folder at `/home/agent/workspace/box`.
 
-With **Box AI**, the host script asks Box AI to compare the documents stored in Box and writes the answer into the sandbox's mounted folder. With **OpenAI**, the reviewer runs inside the sandbox, reads the mounted documents, and sends their text to OpenAI for analysis.
+The reviewer runs inside the sandbox, reads the mounted documents, and sends their text to OpenAI for analysis.
 
-Both paths write `Reviewed/Acme-MSA-review.md` into the mount for synchronization back to Box. Open that file in Box to inspect the findings. If a reviewer ID is configured, the demo attempts to assign a Box review task on the memo.
+The reviewer writes `Reviewed/Acme-MSA-review.md` into the mount for synchronization back to Box. Open that file in Box to inspect the findings. If a reviewer ID is configured, the demo attempts to assign a Box review task on the memo.
 
 ### 4. Explore the live workspace
 

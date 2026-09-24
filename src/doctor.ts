@@ -40,11 +40,7 @@ async function main(): Promise<void> {
       config.boxMountArchive,
     );
     console.log("✓ Docker Sandbox accepted the Box Mount Linux binary");
-    if (config.openaiApiKey) {
-      await validateOpenAi(sandbox, config.openaiModel);
-    } else {
-      console.log("ℹ No OpenAI key configured; the demo will use Box AI");
-    }
+    await validateOpenAi(sandbox, config.openaiModel);
   } finally {
     await sandbox?.kill().catch(() => undefined);
   }
