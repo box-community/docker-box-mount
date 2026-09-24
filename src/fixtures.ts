@@ -47,9 +47,7 @@ export async function uploadFixtures(
       data.byteOffset,
       data.byteOffset + data.byteLength,
     ) as ArrayBuffer;
-    await sandbox.files.write(remotePath, upload, {
-      requestTimeoutMs: 120_000,
-    });
+    await sandbox.files.write(remotePath, upload);
     uploaded.push(remotePath);
   }
 

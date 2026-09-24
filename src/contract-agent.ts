@@ -8,7 +8,7 @@ import {
 
 export const REVIEW_OUTPUT_PATH =
   `${REMOTE_MOUNT_PATH}/Reviewed/Acme-MSA-review.md`;
-const REMOTE_OPENAI_AGENT_PATH = "/home/user/openai-review-agent";
+const REMOTE_OPENAI_AGENT_PATH = "/home/agent/openai-review-agent";
 
 const openAiRunner = String.raw`
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -17,6 +17,8 @@ import mammoth from "mammoth";
 
 const mountPath = process.argv[2];
 const outputPath = process.argv[3];
+const model = process.argv[4];
+if (!model) throw new Error("No OpenAI model was supplied to the reviewer.");
 const contractPath = mountPath + "/Incoming/Acme-MSA.docx";
 const playbookPath =
   mountPath + "/Playbook/approved-contract-playbook.md";
@@ -49,7 +51,7 @@ const response = await fetch("https://api.openai.com/v1/responses", {
     "content-type": "application/json",
   },
   body: JSON.stringify({
-    model: process.env.OPENAI_MODEL || "gpt-5.5",
+    model,
     input,
   }),
 });
@@ -93,7 +95,7 @@ export function reviewProvider(config: DemoConfig): "OpenAI" | "Box AI" {
   return config.openaiApiKey ? "OpenAI" : "Box AI";
 }
 
-async function runOpenAiAgent(sandbox: Sandbox): Promise<string> {
+async function runOpenAiAgent(sandbox: Sandbox, model: string): Promise<string> {
   await sandbox.commands.run(
     `mkdir -p ${shellQuote(REMOTE_OPENAI_AGENT_PATH)}`,
     { timeoutMs: 30_000 },
@@ -119,6 +121,7 @@ async function runOpenAiAgent(sandbox: Sandbox): Promise<string> {
       "node review.mjs",
       shellQuote(REMOTE_MOUNT_PATH),
       shellQuote(REVIEW_OUTPUT_PATH),
+      shellQuote(model),
     ].join(" "),
     {
       cwd: REMOTE_OPENAI_AGENT_PATH,
@@ -158,7 +161,7 @@ export async function runContractAgent(
   config: DemoConfig,
 ): Promise<string> {
   if (config.openaiApiKey) {
-    return runOpenAiAgent(sandbox);
+    return runOpenAiAgent(sandbox, config.openaiModel);
   }
   return runBoxAiReview(
     sandbox,

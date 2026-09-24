@@ -4,47 +4,11 @@ import { BoxApiError } from "box-node-sdk";
 import type { Sandbox } from "./sandbox.js";
 import { validateBoxAccess } from "./box.js";
 import { FIXTURES_PATH, getDemoConfig } from "./config.js";
+import { validateOpenAi } from "./openai-check.js";
 import {
   createDemoSandbox,
   installBoxMount,
 } from "./sandbox.js";
-
-async function validateOpenAi(
-  sandbox: Sandbox,
-  model: string,
-): Promise<void> {
-  await sandbox.files.write(
-    "/tmp/check-openai.mjs",
-    [
-      'const response = await fetch("https://api.openai.com/v1/models", {',
-      "  headers: {",
-      '    authorization: "Bearer " + process.env.OPENAI_API_KEY,',
-      "  },",
-      "});",
-      "if (!response.ok) {",
-      "  console.error(",
-      '    "OpenAI key check failed (" + response.status + "): " +',
-      "      (await response.text()),",
-      "  );",
-      "  process.exit(1);",
-      "}",
-      "const payload = await response.json();",
-      "const model = process.env.OPENAI_MODEL;",
-      "if (!payload.data?.some((entry) => entry.id === model)) {",
-      '  console.error("OpenAI model is not available to this key: " + model);',
-      "  process.exit(1);",
-      "}",
-    ].join("\n"),
-  );
-  try {
-    await sandbox.commands.run("node /tmp/check-openai.mjs", {
-      timeoutMs: 30_000,
-    });
-  } catch (error) {
-    throw error;
-  }
-  console.log(`✓ OpenAI key works and can access ${model}`);
-}
 
 async function main(): Promise<void> {
   const config = getDemoConfig();

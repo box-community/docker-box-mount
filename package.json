@@ -16,7 +16,7 @@
     "check:ubuntu": "bash scripts/check-ubuntu.sh",
     "generate:fixtures": "tsx scripts/generate-fixtures.ts",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck"
+    "test": "npm run typecheck && tsx --test tests/*.test.ts"
   },
   "keywords": [
     "box",

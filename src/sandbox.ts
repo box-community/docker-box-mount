@@ -21,7 +21,7 @@ export async function createDemoSandbox(_config: DemoConfig, _timeoutMs = SANDBO
 }
 export const connectSandbox = async (sandboxId: string): Promise<Sandbox> => ({
   sandboxId,
-  commands: { run: async (command, options) => ({ stdout: await execSandbox({ sandboxId } as Sandbox, command, options?.timeoutMs), stderr: "" }) },
+  commands: { run: async (command, options) => ({ stdout: await execSandbox({ sandboxId } as Sandbox, options?.cwd ? `cd ${shellQuote(options.cwd)} && ${command}` : command, options?.timeoutMs), stderr: "" }) },
   files: { write: async (path, data) => { const value = typeof data === "string" ? data : Buffer.from(data).toString("base64"); const command = typeof data === "string" ? `printf %s ${shellQuote(data)} > ${shellQuote(path)}` : `echo ${shellQuote(value)} | base64 -d > ${shellQuote(path)}`; await execSandbox({ sandboxId } as Sandbox, command); } },
   kill: async () => { await sbx(["rm", "--force", sandboxId]); },
 });
