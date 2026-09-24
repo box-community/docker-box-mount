@@ -1,105 +1,187 @@
-# Docker Sandbox Box Mount contract review
+# Box Mount Contract Review with Docker Sandboxes
 
-This project demonstrates contract review with Box Mount and Docker Sandboxes. It uses [`sbx-kits-box`](https://github.com/ajeetraina/sbx-kits-box) for the Box Mount binary, Box network policy, and proxy-managed credentials.
+[Box Mount](https://developer.box.com/guides/box-mount) gives agents a filesystem backed by a Box folder. Tools can read documents and write results using ordinary file paths; a background process synchronizes changes in both directions, using the authenticated identity's Box permissions.
 
-## Quick setup — Ubuntu / DigitalOcean
+[Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) supplies the execution environment: an isolated microVM with its own filesystem and tools, managed through the `sbx` CLI.
 
-Start with an Ubuntu 24.04+ x86_64 host with KVM available, a sudo-capable SSH account, and Node.js 20+. Have an empty Box folder, a Box Developer Token with Box AI access, and the [developer preview Box Mount](https://developer.box.com/guides/box-mount) Linux binary ready. See the [appendix](#appendix) for environment checks.
+This demo brings them together to compare a synthetic MSA with an approved legal playbook and save a review memo back to Box. It uses Box AI by default, or an optional OpenAI reviewer running inside the sandbox.
+
+## Prerequisites
+
+- An Ubuntu 24.04+ x86_64 host with KVM available and a sudo-capable account.
+- Node.js 20+ and npm.
+- A new, empty Box folder and its ID—the number at the end of its Box URL.
+- A Box Developer Token and Box AI API access, or an OpenAI API key.
+- The Linux x86_64 Box Mount binary from the [Box Mount preview](https://developer.box.com/guides/box-mount).
+
+The steps below target Ubuntu, including a DigitalOcean droplet with nested virtualization. Environment checks and ARM instructions are in the [appendix](#appendix).
+
+## Setup
 
 ### 1. Install Docker and Sandboxes
+
+Run these commands on your Ubuntu host:
 
 ```bash
 curl -fsSL https://get.docker.com | sudo SBX=1 sh
 sudo usermod -aG kvm,docker "$USER"
 ```
 
-Disconnect and SSH back in to apply both group memberships, then sign in:
+Reconnect over SSH to apply the group memberships, then sign in:
 
 ```bash
 sbx login
 ```
 
-### 2. Set up the project
+Docker Engine builds the template image; `sbx` creates and manages the sandbox. Docker Desktop is not required on this host. See [Docker's installation guide](https://docs.docker.com/ai/sandboxes/install/) for details.
+
+### 2. Configure the project
 
 ```bash
-git clone <your-repository-url> docker-box-mount
+git clone https://github.com/box-community/docker-box-mount.git
 cd docker-box-mount
 npm install
-mkdir -p kit/box-mount/linux
-cp /path/to/box-mount kit/box-mount/linux/box-mount
-chmod 0755 kit/box-mount/linux/box-mount
 cp .env.example .env
 chmod 600 .env
 editor .env
 ```
 
-Set `BOX_ACCESS_TOKEN` and `BOX_FOLDER_ID` in `.env`. Leave the optional fields blank to use Box AI.
+Fill in `BOX_ACCESS_TOKEN` and `BOX_FOLDER_ID`. Leave `OPENAI_API_KEY` blank to use Box AI.
 
-### 3. Build and authenticate
+To use the OpenAI reviewer, set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` in `.env`. To assign the resulting memo to a person, set `BOX_REVIEWER_USER_ID` to their Box user ID; otherwise, task assignment is skipped.
+
+### 3. Build the Box Mount template
+
+Place the supplied Linux executable in the kit and build:
 
 ```bash
+mkdir -p kit/box-mount/linux
+cp /path/to/box-mount kit/box-mount/linux/box-mount
+chmod 0755 kit/box-mount/linux/box-mount
 ./kit/scripts/build-and-load.sh
+```
+
+The script builds `sbx-box:local` and loads it into the sandbox runtime's image store. Nothing is pushed to a registry.
+
+This project uses [`sbx-kits-box`](https://github.com/ajeetraina/sbx-kits-box). Its [Dockerfile](kit/Dockerfile) packages the Box Mount executable in a **template**; its [kit specification](kit/spec.yaml) adds Box network rules and credential injection when the sandbox is created. The binary is supplied separately and is ignored by Git.
+
+### 4. Register sandbox credentials
+
+```bash
 sbx secret set box
 ```
 
-Paste the same Box token at the secret prompt. Editing `.env` does not export its values into your shell.
+Paste the same Box token you put in `.env`. The host scripts read `.env` for Box API calls; Box Mount uses the secret registered with `sbx`. Editing `.env` does not populate the sandbox secret store.
+
+If you configured the OpenAI reviewer, also run:
+
+```bash
+sbx secret set openai
+```
+
+Paste your OpenAI API key. Docker's [credential proxy](https://docs.docker.com/ai/sandboxes/configuration/credentials/) replaces placeholder credentials on matching outbound requests. Seeing `proxy-managed` in a sandbox environment variable is expected.
 
 ## Run
 
-```bash
-npm run doctor   # validate setup
-npm run seed     # upload the sample contract and playbook
-npm run demo     # generate the review
-```
+Run these steps in order from the project directory. Finish with teardown before starting another session; the commands share the sandbox name `box-contract-review`.
 
-Find the memo in your Box folder at `Reviewed/Acme-MSA-review.md`. The sandbox stays running for exploration.
+### 1. Validate your setup
 
 ```bash
-npm run status   # check the mounted workspace
-npm run teardown # finish syncing and remove the sandbox when done
+npm run doctor
 ```
 
-The fixtures are synthetic and the generated memo is not legal advice.
+This checks the local configuration and fixtures, Box account and folder access, and whether a temporary sandbox can execute Box Mount. When OpenAI is configured, it also checks authentication and access to the selected model.
+
+### 2. Seed the Box folder
+
+```bash
+npm run seed
+```
+
+This mounts your Box folder in a temporary sandbox and copies the sample files into the mount. Box Mount uploads them to Box; the command then unmounts and removes that sandbox.
+
+Your Box folder now contains:
+
+```text
+Incoming/Acme-MSA.docx
+Playbook/approved-contract-playbook.md
+Reviewed/
+```
+
+### 3. Run the review
+
+```bash
+npm run demo
+```
+
+The demo creates a sandbox from the template and kit, then mounts your Box folder at `/home/agent/workspace/box`.
+
+With **Box AI**, the host script asks Box AI to compare the documents stored in Box and writes the answer into the sandbox's mounted folder. With **OpenAI**, the reviewer runs inside the sandbox, reads the mounted documents, and sends their text to OpenAI for analysis.
+
+Both paths write `Reviewed/Acme-MSA-review.md` into the mount for synchronization back to Box. Open that file in Box to inspect the findings. If a reviewer ID is configured, the demo attempts to assign a Box review task on the memo.
+
+### 4. Explore the live workspace
+
+The sandbox stays running after the review. Check the mount:
+
+```bash
+npm run status
+```
+
+You can also open a shell:
+
+```bash
+sbx exec -it box-contract-review -- bash
+ls /home/agent/workspace/box
+```
+
+Changes in Box flow into this directory, and writes in the directory flow back to Box while sync is active. This is what lets an agent work with familiar filesystem tools while people continue working in Box.
+
+### 5. Clean up
+
+Exit the sandbox shell, then run on the host:
+
+```bash
+npm run teardown
+```
+
+This requests a final sync and unmount, then removes the sandbox and local session state. Successfully synchronized files remain in Box. Use this command when finished; the application does not enforce an automatic sandbox expiry.
+
+The included contract and generated review are synthetic demonstrations, not legal advice.
 
 ## Appendix
 
-### Missing utilities
+### KVM and Ubuntu checks
 
-If the build reports `file: command not found`, install it and retry:
+```bash
+ls -l /dev/kvm
+npm run check:ubuntu
+```
+
+If `/dev/kvm` is absent, check kernel-module loading and nested virtualization support with your provider. If access is denied, confirm your account belongs to the `kvm` group and reconnect after changing membership. For additional diagnostics, install `cpu-checker` and run `kvm-ok`.
+
+### Missing utilities and ARM hosts
+
+If the build reports `file: command not found`:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y file
 ```
 
-If `curl` or `git` is missing, install the corresponding package with `apt-get`. Install `ca-certificates` if the system lacks trusted CA certificates. The optional `kvm-ok` diagnostic below is provided by `cpu-checker` (`sudo apt-get install -y cpu-checker`).
+Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For an ARM host, use the Linux arm64 binary at `kit/box-mount/linux-arm64/box-mount`; the build script selects the host architecture.
 
-### KVM and host checks
+### Tokens and authentication
 
-Docker Sandboxes needs hardware virtualization. On a cloud VM, this requires nested virtualization. Check your host with:
+Box Developer Tokens expire after approximately 60 minutes and cannot refresh themselves. Update `.env` and `sbx secret set box`, then recreate the demo sandbox. For OpenAI key changes, update `.env` and `sbx secret set openai`.
 
-```bash
-ls -l /dev/kvm
-kvm-ok
-npm run check:ubuntu
-```
+An OpenAI error that names `proxy-managed` means the placeholder reached the API. Check the stored OpenAI secret and the request's use of Docker's credential proxy. An unavailable-model error should name your configured `OPENAI_MODEL`.
 
-If `/dev/kvm` is absent, investigate KVM availability and kernel-module loading with your provider. The host must expose virtualization support before `sbx` can run. If access is denied, confirm your user belongs to the `kvm` group and reconnect after changing membership.
+On headless Linux without a keyring, Docker stores secrets under `~/.config/com.docker.sandboxes` by default. Also keep `.env` private: this demo shares the project directory with the sandbox, so proxy injection alone does not hide secrets saved in that shared directory.
 
-### ARM hosts
+### Sync and template troubleshooting
 
-For an arm64 host, place the Linux arm64 binary at `kit/box-mount/linux-arm64/box-mount`. The build script selects the binary for your host architecture. Use `file` to check the binary; an amd64 build cannot run in an arm64 sandbox.
+Check `sbx template ls` if the sandbox cannot find `sbx-box:local`. Check `sbx policy log box-contract-review` for blocked network requests while the sandbox exists. Edit files in place inside the mount; save-by-replacement can affect Box version history.
 
-### Credentials and token rotation
-
-The kit uses a `proxy-managed` sentinel for Box requests; the host proxy injects the stored Box credential. On headless Linux without a keyring, `sbx` stores secrets under `~/.config/com.docker.sandboxes` by default. Treat that directory and `.env` as sensitive.
-
-When a Box token expires, update `.env`, run `sbx secret set box` with the replacement token, and recreate the sandbox with `npm run teardown` followed by `npm run demo`.
-
-### Inspecting the sandbox
-
-```bash
-sbx exec -it box-contract-review -- bash
-```
-
-The mounted Box folder is at `/home/agent/workspace/box`. See [the kit documentation](kit/README.md) for binary setup and sync troubleshooting. The private Box Mount binary is ignored by Git; keep it and any image containing it private.
+See the [kit documentation](kit/README.md) for more detail. Keep the preview binary and images containing it private.
