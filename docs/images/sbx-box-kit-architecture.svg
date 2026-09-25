@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="920" viewBox="0 0 1920 920" role="img" aria-labelledby="title description">
+  <title id="title">Docker Sandboxes Box Kit architecture</title>
+  <desc id="description">The locally built sbx-box:local template supplies the Linux Box Mount binary. The Box kit spec supplies network rules, credential mapping, a placeholder token and agent instructions. Inside a Docker Sandbox, an agent accesses a mounted folder through filesystem tools and Box Mount synchronizes it with Box. The SBX proxy outside the sandbox applies network policy and replaces the proxy-managed placeholder with the real Box token from the host secret store on configured destinations. The Box Kit does not contain the real token.</desc>
+  <defs>
+    <marker id="gray-arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L9 5.5 L1 10" fill="none" stroke="#52657C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="blue-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L10 6 L1 11" fill="none" stroke="#0061D5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #162B46; }
+      .center { text-anchor: middle; }
+      .muted { fill: #52657C; }
+      .blue { fill: #0061D5; }
+      .white { fill: #FFFFFF; }
+      .mono { font-family: Menlo, Consolas, monospace; }
+    </style>
+  </defs>
+  <rect width="1920" height="920" fill="#FFFFFF"/>
+
+  <!-- Build-time inputs. No overall header or subtitle. -->
+  <text x="290" y="84" font-size="31" font-weight="700" class="center">Template image</text>
+  <text x="290" y="132" font-size="29" class="center mono blue">sbx-box:local</text>
+  <text x="290" y="175" font-size="25" class="center muted">Linux Box Mount binary</text>
+  <text x="290" y="213" font-size="23" class="center muted">Built locally from the Dockerfile</text>
+  <line x1="290" y1="238" x2="290" y2="317" stroke="#52657C" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#gray-arrow)"/>
+  <text x="309" y="285" font-size="23" class="mono muted">--template</text>
+
+  <text x="735" y="84" font-size="31" font-weight="700" class="center">Box Kit</text>
+  <text x="735" y="132" font-size="29" class="center mono blue">spec.yaml</text>
+  <text x="735" y="175" font-size="25" class="center muted">Network + credential policy</text>
+  <text x="735" y="213" font-size="23" class="center muted">Placeholder + agent instructions</text>
+  <line x1="735" y1="238" x2="735" y2="317" stroke="#52657C" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#gray-arrow)"/>
+  <text x="754" y="285" font-size="23" class="mono muted">--kit</text>
+
+  <!-- Only the proxy receives the secret from the host store. -->
+  <text x="1290" y="84" font-size="31" font-weight="700" class="center">Host secret store</text>
+  <text x="1290" y="132" font-size="24" class="center mono">sbx secret set box</text>
+  <text x="1290" y="175" font-size="25" class="center muted">Real Box access token</text>
+  <line x1="1290" y1="199" x2="1290" y2="463" stroke="#0061D5" stroke-width="3" marker-end="url(#blue-arrow)"/>
+  <text x="1310" y="292" font-size="23" class="muted">Available to</text>
+  <text x="1310" y="325" font-size="23" class="muted">the proxy</text>
+
+  <!-- MicroVM runtime boundary. -->
+  <rect x="60" y="332" width="910" height="460" rx="22" fill="#F5F8FC" stroke="#CFD9E6" stroke-width="2"/>
+  <text x="100" y="385" font-size="28" font-weight="700" letter-spacing="1" class="muted">DOCKER SANDBOX</text>
+  <text x="100" y="422" font-size="24" class="muted">Isolated agent runtime</text>
+
+  <rect x="100" y="480" width="200" height="204" rx="14" fill="#FFFFFF" stroke="#B9C8DA" stroke-width="2"/>
+  <text x="200" y="539" font-size="32" font-weight="700" class="center">AI agent</text>
+  <text x="200" y="586" font-size="23" class="center muted">Filesystem tools</text>
+  <text x="200" y="634" font-size="24" class="center">Read / write</text>
+
+  <line x1="312" y1="582" x2="348" y2="582" stroke="#52657C" stroke-width="2.5" marker-start="url(#gray-arrow)" marker-end="url(#gray-arrow)"/>
+  <text x="330" y="556" font-size="21" class="center muted">I/O</text>
+
+  <rect x="360" y="480" width="240" height="204" rx="14" fill="#FFFFFF" stroke="#B9C8DA" stroke-width="2"/>
+  <text x="480" y="528" font-size="28" font-weight="700" class="center">Mounted folder</text>
+  <text x="480" y="574" font-size="24" class="center mono blue">/home/agent/</text>
+  <text x="480" y="607" font-size="24" class="center mono blue">workspace/box</text>
+  <text x="480" y="653" font-size="23" class="center muted">POSIX files</text>
+
+  <line x1="612" y1="582" x2="648" y2="582" stroke="#52657C" stroke-width="2.5" marker-start="url(#gray-arrow)" marker-end="url(#gray-arrow)"/>
+  <text x="630" y="556" font-size="21" class="center muted">Sync</text>
+
+  <rect x="660" y="480" width="250" height="204" rx="14" fill="#0061D5"/>
+  <text x="785" y="539" font-size="33" font-weight="700" class="center white">Box Mount</text>
+  <text x="785" y="586" font-size="24" class="center white">Background daemon</text>
+  <text x="785" y="634" font-size="23" class="center white">Two-way sync</text>
+
+  <text x="515" y="748" font-size="24" class="center mono">BOX_ACCESS_TOKEN=proxy-managed</text>
+
+  <!-- Proxy is deliberately outside the sandbox boundary. -->
+  <text x="1020" y="512" font-size="22" class="center muted">Placeholder</text>
+  <line x1="925" y1="540" x2="1115" y2="540" stroke="#0061D5" stroke-width="3" marker-end="url(#blue-arrow)"/>
+  <line x1="1115" y1="625" x2="925" y2="625" stroke="#0061D5" stroke-width="3" marker-end="url(#blue-arrow)"/>
+  <text x="1020" y="664" font-size="22" class="center muted">Box updates</text>
+
+  <rect x="1130" y="480" width="320" height="204" rx="14" fill="#EEF5FF" stroke="#0061D5" stroke-width="2"/>
+  <text x="1290" y="530" font-size="34" font-weight="700" class="center blue">SBX proxy</text>
+  <text x="1290" y="576" font-size="24" class="center">Enforces network rules</text>
+  <text x="1290" y="616" font-size="24" class="center">Injects real Box token</text>
+  <text x="1290" y="655" font-size="22" class="center muted">On configured destinations</text>
+
+  <text x="1530" y="512" font-size="22" class="center muted">Box API</text>
+  <line x1="1465" y1="540" x2="1595" y2="540" stroke="#0061D5" stroke-width="3" marker-end="url(#blue-arrow)"/>
+  <line x1="1595" y1="625" x2="1465" y2="625" stroke="#0061D5" stroke-width="3" marker-end="url(#blue-arrow)"/>
+
+  <rect x="1610" y="480" width="250" height="204" rx="14" fill="#EEF5FF" stroke="#0061D5" stroke-width="2"/>
+  <text x="1735" y="541" font-size="43" font-weight="700" class="center blue">Box</text>
+  <text x="1735" y="587" font-size="25" class="center">Enterprise folder</text>
+  <text x="1735" y="634" font-size="23" class="center muted">Files &amp; results</text>
+
+  <text x="1290" y="748" font-size="25" font-weight="700" class="center">Real token stays outside</text>
+  <text x="1290" y="784" font-size="25" font-weight="700" class="center">the sandbox</text>
+  <text x="1735" y="748" font-size="24" class="center muted">Box permissions</text>
+  <text x="1735" y="784" font-size="24" class="center muted">and governance</text>
+
+  <text x="60" y="876" font-size="21" class="muted">Source: github.com/ajeetraina/sbx-kits-box</text>
+  <text x="1860" y="876" font-size="21" text-anchor="end" class="muted">Box Mount binary supplied separately</text>
+</svg>

@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title description">
+  <title id="title">How Box Mount works</title>
+  <desc id="description">Inside a Linux sandbox, an AI agent reads and writes a local POSIX directory. The Box Mount background daemon synchronizes this directory in both directions with a Box folder through the Box API. People and other agents collaborate through Box. Box applies the authenticated identity's permissions and governance. In the recommended security layout, only the mount directory is shared with the agent and the daemon's credentials remain private.</desc>
+  <defs>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M 1 1 L 8 5 L 1 9" fill="none" stroke="#52657C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M 1 1 L 10 6 L 1 11" fill="none" stroke="#0061D5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #162B46; }
+      .muted { fill: #52657C; }
+      .blue { fill: #0061D5; }
+      .white { fill: #FFFFFF; }
+      .mono { font-family: Menlo, Consolas, monospace; }
+      .center { text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <text x="80" y="112" font-size="58" font-weight="700">How Box Mount works</text>
+  <text x="80" y="164" font-size="30" class="muted">Box content becomes a local filesystem for your agent</text>
+
+  <!-- Runtime boundary includes the agent, the shared directory and the daemon. -->
+  <rect x="80" y="248" width="1150" height="600" rx="22" fill="#F5F8FC" stroke="#CFD9E6" stroke-width="2"/>
+  <text x="120" y="301" font-size="24" font-weight="700" class="muted" letter-spacing="1.5">LINUX SANDBOX / AGENT RUNTIME</text>
+
+  <!-- The agent has a local file interface, not a direct Box API connection. -->
+  <rect x="120" y="393" width="250" height="222" rx="14" fill="#FFFFFF" stroke="#B9C8DA" stroke-width="2"/>
+  <text x="245" y="464" font-size="35" font-weight="700" class="center">AI agent</text>
+  <text x="245" y="510" font-size="25" class="center muted">Filesystem tools</text>
+  <text x="245" y="562" font-size="23" class="center mono">read()  write()</text>
+
+  <line x1="384" y1="510" x2="456" y2="510" stroke="#52657C" stroke-width="2.5" marker-start="url(#arrow-gray)" marker-end="url(#arrow-gray)"/>
+  <text x="420" y="482" font-size="22" class="center muted">File I/O</text>
+
+  <!-- Local representation of the mounted Box folder. -->
+  <rect x="470" y="393" width="300" height="222" rx="14" fill="#FFFFFF" stroke="#B9C8DA" stroke-width="2"/>
+  <text x="620" y="452" font-size="31" font-weight="700" class="center">Local directory</text>
+  <text x="620" y="510" font-size="30" class="center mono blue">/mnt/box</text>
+  <text x="620" y="560" font-size="25" class="center muted">POSIX filesystem</text>
+
+  <line x1="784" y1="510" x2="856" y2="510" stroke="#52657C" stroke-width="2.5" marker-start="url(#arrow-gray)" marker-end="url(#arrow-gray)"/>
+  <text x="820" y="482" font-size="22" class="center muted">Sync</text>
+
+  <!-- Background process handles Box integration. -->
+  <rect x="870" y="393" width="300" height="222" rx="14" fill="#0061D5"/>
+  <text x="1020" y="464" font-size="36" font-weight="700" class="center white">Box Mount</text>
+  <text x="1020" y="511" font-size="25" class="center white">Background daemon</text>
+  <text x="1020" y="561" font-size="24" class="center white">Continuous sync</text>
+
+  <!-- Two distinct directions make the background sync behavior explicit. -->
+  <text x="1310" y="392" font-size="24" font-weight="700" class="center blue">BOX API</text>
+  <text x="1310" y="449" font-size="24" class="center muted">Agent changes</text>
+  <line x1="1187" y1="474" x2="1430" y2="474" stroke="#0061D5" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <line x1="1430" y1="544" x2="1187" y2="544" stroke="#0061D5" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <text x="1310" y="584" font-size="24" class="center muted">Box updates</text>
+
+  <!-- People collaborate on the same Box folder. -->
+  <text x="1620" y="275" font-size="29" font-weight="700" class="center">People &amp; other agents</text>
+  <line x1="1620" y1="299" x2="1620" y2="377" stroke="#52657C" stroke-width="2.5" marker-start="url(#arrow-gray)" marker-end="url(#arrow-gray)"/>
+  <text x="1642" y="344" font-size="23" class="muted">Collaborate</text>
+
+  <rect x="1450" y="393" width="340" height="222" rx="14" fill="#EEF5FF" stroke="#0061D5" stroke-width="2"/>
+  <text x="1620" y="465" font-size="46" font-weight="700" class="center blue">Box</text>
+  <text x="1620" y="511" font-size="28" class="center">Enterprise folder</text>
+  <text x="1620" y="559" font-size="24" class="center muted">Documents &amp; results</text>
+
+  <!-- Recommended credential isolation, not a claim about this demo's deployment. -->
+  <line x1="120" y1="672" x2="1190" y2="672" stroke="#D7E0EB" stroke-width="2"/>
+  <text x="120" y="718" font-size="23" font-weight="700" class="muted">RECOMMENDED SECURITY LAYOUT</text>
+  <text x="120" y="765" font-size="26">Share only the mount directory with the agent</text>
+  <text x="120" y="808" font-size="23" class="muted">Separate Unix users isolate the daemon’s credentials</text>
+  <text x="1020" y="719" font-size="26" font-weight="700" class="center">Private credentials</text>
+  <text x="1020" y="764" font-size="23" class="center muted">OAuth user or</text>
+  <text x="1020" y="798" font-size="23" class="center muted">JWT service account</text>
+
+  <text x="1620" y="694" font-size="28" font-weight="700" class="center">Box enforces access</text>
+  <text x="1620" y="739" font-size="25" class="center muted">Identity permissions</text>
+  <text x="1620" y="777" font-size="25" class="center muted">Governance &amp; audit trail</text>
+  <text x="1620" y="815" font-size="25" class="center muted">Version / conflict protection</text>
+
+  <text x="80" y="974" font-size="23" class="muted">Source: developer.box.com/guides/box-mount</text>
+  <text x="1790" y="974" font-size="23" text-anchor="end" class="muted">Box Mount private preview</text>
+</svg>

@@ -1,5 +1,7 @@
 # Box Mount Contract Review with Docker Sandboxes
 
+![Box Mount architecture: an agent reads and writes a local directory; the Box Mount daemon synchronizes it with a Box enterprise folder where people and other agents collaborate.](docs/images/box-mount-architecture.svg)
+
 [Box Mount](https://developer.box.com/guides/box-mount) gives agents a filesystem backed by a Box folder. Tools can read documents and write results using ordinary file paths; a background process synchronizes changes in both directions, using the authenticated identity's Box permissions.
 
 [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) supplies the execution environment: an isolated microVM with its own filesystem and tools, managed through the `sbx` CLI.
@@ -85,6 +87,12 @@ This reads both tokens from `.env` and registers them with `sbx` through stdinâ€
 
 The host scripts use the Box token for account checks and optional task assignment. Inside the sandbox, Docker's [credential proxy](https://docs.docker.com/ai/sandboxes/configuration/credentials/) replaces placeholder credentials on matching outbound requests. Seeing `proxy-managed` in a sandbox environment variable is expected.
 
+The pieces you just configured work together as shown below: the **template** supplies the Box Mount executable, the **kit** supplies network rules and credential mappings, and the host-side **proxy** injects the stored Box token on matching requests. The kit contains no real token.
+
+![Docker Sandboxes Box Kit architecture: a template and kit configure an isolated agent runtime; Box Mount sends requests through an external SBX proxy, which applies network rules and injects the Box token from the host secret store.](docs/images/sbx-box-kit-architecture.svg)
+
+The diagram shows the Box credential path, not every shared file. This demo also shares the project directory, including `.env`; proxy injection does not hide credentials in shared files. The review tools cannot read `.env`, but arbitrary sandbox code may be able to. See [tokens and authentication](#tokens-and-authentication) before broadening agent access.
+
 ## Run
 
 Run these steps in order from the project directory. Finish with teardown before starting another session; the commands share the sandbox name `box-contract-review`.
@@ -104,6 +112,8 @@ npm run seed
 ```
 
 This mounts your Box folder in a temporary sandbox and copies the sample files into the mount. Box Mount uploads them to Box; the command then unmounts and removes that sandbox.
+
+That upload illustrates Box Mount's core idea: work with ordinary files and let a background daemon handle Box API calls. While mounted, synchronization runs both waysâ€”local writes upload to Box, and changes in Box flow back to the local directory under the authenticated identity's Box permissions.
 
 Your Box folder now contains:
 
