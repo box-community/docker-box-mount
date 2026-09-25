@@ -4,6 +4,8 @@ import { relative, sep } from "node:path";
 import type { DemoConfig } from "./config.js";
 import { PROJECT_ROOT, SANDBOX_NAME } from "./config.js";
 import { BOX_KIT_REFERENCE, BOX_TEMPLATE } from "./box-kit.js";
+import { registerSandboxSecrets, storeSandboxSecret } from "./secrets.js";
+import { validateSandboxBoxAccess } from "./box-check.js";
 export { BOX_KIT_REFERENCE, BOX_KIT_REPOSITORY } from "./box-kit.js";
 
 const run = promisify(execFile);
@@ -18,12 +20,37 @@ export type Sandbox = {
 const sbx = (args: string[], timeout = 300_000) => run("sbx", args, { cwd: PROJECT_ROOT, timeout });
 export const shellQuote = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`;
 export async function createDemoSandbox(
-  _config: DemoConfig,
+  config: DemoConfig,
   _timeoutMs = SANDBOX_TIMEOUT_MS,
-  launch: (args: string[]) => Promise<unknown> = sbx,
+  {
+    launch = sbx,
+    connect = connectSandbox,
+    store = storeSandboxSecret,
+    checkBox = validateSandboxBoxAccess,
+  }: {
+    launch?: (args: string[]) => Promise<unknown>;
+    connect?: (sandboxId: string) => Promise<Sandbox>;
+    store?: typeof storeSandboxSecret;
+    checkBox?: typeof validateSandboxBoxAccess;
+  } = {},
 ): Promise<Sandbox> {
   await launch(["run", "--detached", "--name", SANDBOX_NAME, "--template", BOX_TEMPLATE, "shell", "--kit", BOX_KIT_REFERENCE]);
-  return connectSandbox(SANDBOX_NAME);
+  // Register only after creation, matching the verified SBX scoped-secret flow.
+  // Tokens go to the host secret store via stdin, never to guest command arguments.
+  try {
+    const sandbox = await connect(SANDBOX_NAME);
+    await registerSandboxSecrets(config, (service, value) =>
+      store(service, value, { sandboxId: sandbox.sandboxId }));
+    await checkBox(sandbox, config.boxFolderId);
+    return sandbox;
+  } catch (error) {
+    // Callers have not received the sandbox yet and cannot clean it up themselves.
+    // A launch failure is deliberately outside this block: never delete an existing sandbox.
+    await launch(["rm", "--force", SANDBOX_NAME]).catch(() => {
+      console.warn(`Warning: could not remove incomplete sandbox ${SANDBOX_NAME}; inspect it with sbx ls.`);
+    });
+    throw error;
+  }
 }
 export const connectSandbox = async (sandboxId: string): Promise<Sandbox> => ({
   sandboxId,

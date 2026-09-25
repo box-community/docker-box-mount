@@ -3,9 +3,9 @@ import { registerSandboxSecrets } from "./secrets.js";
 
 async function main(): Promise<void> {
   await registerSandboxSecrets(getDemoConfig());
-  console.log("✓ Box and OpenAI credentials registered with sbx from your configuration.");
-  console.log("Next: npm run doctor");
-  console.log("After changing a token in .env, rerun npm run setup and recreate the sandbox.");
+  console.log("✓ Global Box and OpenAI credentials stored with sbx from your configuration.");
+  console.log("Each new demo sandbox also registers its own scoped credentials from .env before use.");
+  console.log("Storage is not an authentication check. Next: npm run doctor");
 }
 
 main().catch((error: unknown) => {

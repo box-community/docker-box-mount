@@ -94,6 +94,50 @@ test("CLI failure output is suppressed and errors do not expose the secret", asy
   });
 });
 
+test("sandbox-scoped secrets use the selected sandbox and travel only through stdin", async () => {
+  for (const [service, value] of [["box", config.boxAccessToken], ["openai", config.openaiApiKey]] as const) {
+    await storeSandboxSecret(service, value, {
+      sandboxId: "box-contract-review",
+      spawnProcess: fakeSbx(`
+        let input = '';
+        process.stdin.setEncoding('utf8');
+        process.stdin.on('data', chunk => { input += chunk; });
+        process.stdin.on('end', () => {
+          process.stdout.write(input);
+          process.stderr.write(input);
+          process.exitCode = input === ${JSON.stringify(value + "\n")} ? 0 : 1;
+        });
+      `, (command, args, options) => {
+        assert.equal(command, "sbx");
+        assert.deepEqual(args, ["secret", "set", service, "--sandbox", "box-contract-review"]);
+        assert.equal(options.shell, false);
+        assert.deepEqual(options.stdio, ["pipe", "ignore", "ignore"]);
+        assert.ok(!Object.hasOwn(options.env!, "BOX_ACCESS_TOKEN"));
+        assert.ok(!Object.hasOwn(options.env!, "OPENAI_API_KEY"));
+      }),
+    });
+  }
+});
+
+test("sandbox-scoped registration failures identify the scope without exposing the token", async () => {
+  await assert.rejects(storeSandboxSecret("box", config.boxAccessToken, {
+    sandboxId: "box-contract-review",
+    spawnProcess: fakeSbx(`
+      process.stdin.resume();
+      process.stdin.on('end', () => {
+        process.stderr.write(${JSON.stringify(config.boxAccessToken)});
+        process.exitCode = 7;
+      });
+    `),
+  }), (error: Error) => {
+    assert.match(error.message, /box secret for sandbox box-contract-review/);
+    assert.match(error.message, /status 7/);
+    assert.ok(!error.message.includes(config.boxAccessToken));
+    assert.ok(!error.message.includes("rerun npm run setup"));
+    return true;
+  });
+});
+
 test("a missing sbx executable produces a safe actionable error", async () => {
   const spawnProcess = ((_command: string, _args: readonly string[], options: SpawnOptions) =>
     spawn("/nonexistent-sbx-test-executable", [], options)) as typeof spawn;

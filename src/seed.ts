@@ -56,14 +56,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = (error as Error).message;
-  if (message.includes("401") || message.toLowerCase().includes("auth")) {
-    console.error(
-      "\nSeed failed. Your Box Developer Token may have expired.\n" +
-        "Generate a new token, update BOX_ACCESS_TOKEN in .env, run npm run setup, and retry.",
-    );
-  } else {
-    console.error(`\nSeed failed:\n${message}`);
-  }
+  console.error(`\nSeed failed:\n${(error as Error).message}`);
   process.exitCode = 1;
 });

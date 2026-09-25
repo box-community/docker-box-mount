@@ -120,17 +120,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = (error as Error).message;
-  if (
-    message.includes("401") ||
-    message.toLowerCase().includes("authentication")
-  ) {
-    console.error(
-      "\nDemo failed. A Developer Token or API key may have expired or be invalid.\n" +
-        "Refresh the relevant value in .env, run npm run setup, and retry.",
-    );
-  } else {
-    console.error(`\nDemo failed:\n${message}`);
-  }
+  console.error(`\nDemo failed:\n${(error as Error).message}`);
   process.exitCode = 1;
 });

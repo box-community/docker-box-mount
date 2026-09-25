@@ -78,7 +78,9 @@ The **template** supplies the private executable; the **kit** supplies network r
 npm run setup
 ```
 
-This reads both tokens from `.env` and registers them with `sbx` through stdin—no second paste, token-bearing command arguments, or token logs. It creates or replaces the host-level `box` and `openai` service secrets, just like the manual `sbx secret set` commands. No sandbox is created by this step.
+This reads both tokens from `.env` and stores the global `box` and `openai` service secrets through stdin—no second paste, token-bearing command arguments, or token logs. It does not create a sandbox or verify authentication.
+
+Each `doctor`, `seed`, and `demo` run then creates its sandbox, registers both tokens explicitly for that sandbox, and verifies Box folder listing through the proxy before proceeding. This uses the current `.env` values rather than relying on global credential inheritance. Use SBX v0.45.0 or newer for live scoped-secret updates.
 
 The host scripts use the Box token for account checks and optional task assignment. Inside the sandbox, Docker's [credential proxy](https://docs.docker.com/ai/sandboxes/configuration/credentials/) replaces placeholder credentials on matching outbound requests. Seeing `proxy-managed` in a sandbox environment variable is expected.
 
@@ -98,7 +100,7 @@ Run these steps in order from the project directory. Finish with teardown before
 npm run doctor
 ```
 
-This checks the local configuration and fixtures, Box account and folder access, and whether a temporary sandbox can execute Box Mount. It also checks OpenAI authentication and access to the selected model.
+This checks the local configuration and fixtures, Box account and folder access on the host, and Box folder listing through the sandbox's credential proxy. It also checks whether the sandbox can execute Box Mount and authenticate to OpenAI with the selected model. A successful check verifies authentication and listing access, not a full mount or synchronization cycle.
 
 ### 2. Seed the Box folder
 
@@ -193,7 +195,9 @@ Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For a
 
 ### Tokens and authentication
 
-Box Developer Tokens expire after approximately 60 minutes and cannot refresh themselves. Whenever either token changes, update it in `.env`, run `npm run setup`, and recreate the demo sandbox. Editing `.env` alone does not update the secret store. Setup validates both tokens are present before registering them; if one registration fails, fix the reported issue and rerun the command to register both again. Registration stores credentials; `npm run doctor` checks whether they work.
+Box Developer Tokens expire after approximately 60 minutes and cannot refresh themselves. Whenever either token changes, update it in `.env` and recreate the demo sandbox. Each new sandbox refreshes its own scoped secrets automatically; `npm run setup` updates the global copies but does not replace an existing sandbox's scoped values. Editing `.env` alone does not update a running sandbox.
+
+Both tokens are validated before either is registered. If scoped registration or the Box proxy check fails, the command stops before mounting and attempts to remove the newly created sandbox. Fix the reported issue and rerun the command. An HTTP 401 after scoped registration can indicate an invalid token or a proxy credential-binding/injection problem; host authentication alone does not distinguish them. HTTP 403/404 indicates an access or policy problem. These checks report status without printing tokens or folder contents.
 
 An OpenAI error that names `proxy-managed` means the placeholder reached the API. Check the stored OpenAI secret and the request's use of Docker's credential proxy. An unavailable-model error should name your configured `OPENAI_MODEL`.
 

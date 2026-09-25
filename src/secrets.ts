@@ -3,11 +3,12 @@ import { PROJECT_ROOT, type DemoConfig } from "./config.js";
 
 type Service = "box" | "openai";
 type SecretConfig = Pick<DemoConfig, "boxAccessToken" | "openaiApiKey">;
+type SecretOptions = { sandboxId?: string; spawnProcess?: typeof spawn; timeoutMs?: number };
 
 export function storeSandboxSecret(
   service: Service,
   value: string,
-  { spawnProcess = spawn, timeoutMs = 30_000 } = {},
+  { sandboxId, spawnProcess = spawn, timeoutMs = 30_000 }: SecretOptions = {},
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     // dotenv populates process.env. Only stdin should carry these values to sbx.
@@ -15,12 +16,15 @@ export function storeSandboxSecret(
     delete env.BOX_ACCESS_TOKEN;
     delete env.OPENAI_API_KEY;
     const failure = (detail: string) => new Error(
-      `Could not register the ${service} secret: ${detail}. ` +
-      "Check that sbx is installed and logged in, then rerun npm run setup.",
+      `Could not register the ${service} secret${sandboxId ? ` for sandbox ${sandboxId}` : ""}: ${detail}. ` +
+      "Check that sbx is installed and logged in, then " +
+      (sandboxId ? "rerun the command to recreate the sandbox and register its credentials." : "rerun npm run setup."),
     );
     let child;
     try {
-      child = spawnProcess("sbx", ["secret", "set", service], {
+      const args = ["secret", "set", service];
+      if (sandboxId) args.push("--sandbox", sandboxId);
+      child = spawnProcess("sbx", args, {
         cwd: PROJECT_ROOT,
         env,
         shell: false,

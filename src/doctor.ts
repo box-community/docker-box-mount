@@ -35,6 +35,7 @@ async function main(): Promise<void> {
   try {
     console.log("Creating a short-lived Docker Sandbox check...");
     sandbox = await createDemoSandbox(config, 5 * 60 * 1000);
+    console.log("✓ Sandbox-scoped credentials registered; Box folder listing works through the proxy");
     await installBoxMount(
       sandbox,
       config.boxMountArchive,
