@@ -32,7 +32,8 @@ export async function runReviewJob(
     );
   }
 
-  await runContractAgent(sandbox, config);
+  const trace = await runContractAgent(sandbox, config);
+  console.log(trace);
 
   // Local filesystem events normally trigger an immediate cycle. Leave a
   // small buffer before verifying and handing the sandbox to the user.

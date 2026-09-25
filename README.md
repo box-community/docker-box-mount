@@ -4,7 +4,7 @@
 
 [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) supplies the execution environment: an isolated microVM with its own filesystem and tools, managed through the `sbx` CLI.
 
-This demo brings them together to compare a synthetic MSA with an approved legal playbook and save a review memo back to Box. The OpenAI reviewer runs inside the sandbox, where it reads the mounted documents and writes the resulting memo.
+This demo brings them together: an agent discovers a synthetic MSA and approved legal playbook, compares them, and saves a review memo back to Box. Its agent loop and filesystem tools run inside the sandbox; the model runs on OpenAI.
 
 ## Prerequisites
 
@@ -117,7 +117,11 @@ npm run demo
 
 The demo creates a sandbox from the template and kit, then mounts your Box folder at `/home/agent/workspace/box`.
 
-The reviewer runs inside the sandbox, reads the mounted documents, and sends their text to OpenAI for analysis.
+The agent receives a goal: **review the incoming contract against the approved playbook and save the findings**. It chooses its own sequence of `list_files`, `read_file`, and `write_file` calls, observes each result, and can correct errors or revise its report. DOCX text extraction is handled by `read_file`; source documents are not preloaded into the prompt.
+
+All filesystem actions execute inside Docker Sandbox against the Box Mount directory. Text returned by reads is sent to OpenAI for analysis. Tool handlers restrict reads to Markdown/DOCX sources in `Incoming/` and `Playbook/`, plus the review output; writes are limited to `Reviewed/Acme-MSA-review.md`. The agent has no shell or credential-reading tool. These are application-enforced tool permissions, in addition to the sandbox's isolation and Box's access controls.
+
+After the runner finishes, the terminal prints its tool-action trace without document contents or model reasoning. Completion requires this run to read both sources, write the review, and read back the latest saved version. The sequence is model-selected, not a fixed script.
 
 The reviewer writes `Reviewed/Acme-MSA-review.md` into the mount for synchronization back to Box. Open that file in Box to inspect the findings. If a reviewer ID is configured, the demo attempts to assign a Box review task on the memo.
 
@@ -151,6 +155,12 @@ This requests a final sync and unmount, then removes the sandbox and local sessi
 The included contract and generated review are synthetic demonstrations, not legal advice.
 
 ## Appendix
+
+### Agent limits and failures
+
+The runner stops after 20 model turns, 30 tool calls, or four minutes, whichever comes first. Each API request has a 60-second timeout and an 8,192-output-token cap. Files are limited to 2 MiB, returned document text and saved reviews to 128 KiB, and directory listings to 200 entries. Paths are validated; traversal, symlinks, hard links, and writes outside the designated review file are rejected.
+
+Recoverable tool errors are returned to the model so it can choose another action. API failures, exhausted limits, or an unverified result fail the demo explicitly, without a substitute reviewer. A failed run may already have written a partial review into the synced folder; inspect any such file before using it. Read-back verifies the local saved file, not Box synchronization or legal correctness. Qualified legal review is still required.
 
 ### KVM and Ubuntu checks
 

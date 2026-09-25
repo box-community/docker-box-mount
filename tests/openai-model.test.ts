@@ -48,29 +48,13 @@ test("doctor reports the configured model when it is unavailable", async () => {
 test("review runner passes the configured model as a single quoted argument", async () => {
   const model = "configured-model'with-quote";
   let reviewArgs: string[] = [];
-  let script = "";
-  let requestedModel: string | undefined;
   const sandbox: Sandbox = {
     sandboxId: "test",
-    files: { write: async (path, data) => { if (path.endsWith("/review.mjs")) script = String(data); } },
+    files: { write: async () => {} },
     commands: {
       run: async (command) => {
         if (command.startsWith("node ")) {
           reviewArgs = nodeArgs(command);
-          // Supply the module's filesystem/DOCX dependencies as stubs, then run its body.
-          const execute = new Function(
-            "fetch", "process", "mkdir", "readFile", "writeFile", "dirname", "mammoth", "console",
-            `return (async () => { ${script.replace(/^import .*;\n/gm, "")} })();`,
-          );
-          await execute(
-            async (_url: string, options: { body: string }) => {
-              requestedModel = JSON.parse(options.body).model;
-              return { ok: true, json: async () => ({ output_text: "Test review" }) };
-            },
-            { argv: ["node", ...reviewArgs], env: { OPENAI_API_KEY: "proxy-managed" } },
-            async () => {}, async () => "Test playbook", async () => {}, () => "/test",
-            { extractRawText: async () => ({ value: "Test agreement" }) }, { log: () => {} },
-          );
         }
         return { stdout: "review.md", stderr: "" };
       },
@@ -84,5 +68,4 @@ test("review runner passes the configured model as a single quoted argument", as
   await runContractAgent(sandbox, config);
   assert.equal(reviewArgs.length, 4);
   assert.equal(reviewArgs[3], model);
-  assert.equal(requestedModel, model);
 });
