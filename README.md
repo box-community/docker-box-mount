@@ -52,18 +52,28 @@ Optionally set `OPENAI_MODEL` in `.env`. To assign the resulting memo to a perso
 
 ### 3. Build the Box Mount template
 
-Place the supplied Linux executable in the kit and build:
+Clone the upstream [Box Kit](https://github.com/ajeetraina/sbx-kits-box) next to this project. From the `docker-box-mount` directory:
 
 ```bash
-mkdir -p kit/box-mount/linux
-cp /path/to/box-mount kit/box-mount/linux/box-mount
-chmod 0755 kit/box-mount/linux/box-mount
-./kit/scripts/build-and-load.sh
+git clone https://github.com/ajeetraina/sbx-kits-box.git ../sbx-kits-box
+git -C ../sbx-kits-box checkout --detach 897deef77ee6c7dedea81c600f5fbc3753eff550
+mkdir -p ../sbx-kits-box/box-mount/linux
+cp /path/to/box-mount ../sbx-kits-box/box-mount/linux/box-mount
+chmod 0755 ../sbx-kits-box/box-mount/linux/box-mount
+(cd ../sbx-kits-box && ./scripts/build-and-load.sh)
 ```
 
-The script builds `sbx-box:local` and loads it into the sandbox runtime's image store. Nothing is pushed to a registry.
+The upstream script builds `sbx-box:local` and loads it into the sandbox runtime's image store. Nothing is pushed to a registry. The subshell returns you to the demo project for the remaining commands.
 
-This project uses [`sbx-kits-box`](https://github.com/ajeetraina/sbx-kits-box). Its [Dockerfile](kit/Dockerfile) packages the Box Mount executable in a **template**; its [kit specification](kit/spec.yaml) adds Box network rules and credential injection when the sandbox is created. The binary is supplied separately and is ignored by Git.
+The upstream [Dockerfile](https://github.com/ajeetraina/sbx-kits-box/blob/897deef77ee6c7dedea81c600f5fbc3753eff550/Dockerfile) packages the private Box Mount binary in a **template**. At sandbox creation, `sbx` fetches the upstream [kit specification](https://github.com/ajeetraina/sbx-kits-box/blob/897deef77ee6c7dedea81c600f5fbc3753eff550/spec.yaml) directly from GitHub to apply Box network rules and credential injection. This project does not bundle a kit; both references use the same pinned commit.
+
+On a fresh host, allow Docker Hub and this kit repository as [trusted kit sources](https://docs.docker.com/ai/sandboxes/customize/use-kits/#restrict-kit-sources):
+
+```bash
+sbx settings set kit.allowedSources '["docker.io/","github.com/ajeetraina/sbx-kits-box"]'
+```
+
+If you already customized `kit.allowedSources`, add this repository to your existing list instead of replacing it. Sandbox creation needs access to GitHub to resolve the kit.
 
 ### 4. Register sandbox credentials
 
@@ -109,7 +119,7 @@ Reviewed/
 npm run demo
 ```
 
-The demo creates a sandbox from the template and kit, then mounts your Box folder at `/home/agent/workspace/box`.
+The demo creates a sandbox from the local template and the pinned upstream GitHub kit, then mounts your Box folder at `/home/agent/workspace/box`.
 
 The agent receives a goal: **review the incoming contract against the approved playbook and save the findings**. It chooses its own sequence of `list_files`, `read_file`, and `write_file` calls, observes each result, and can correct errors or revise its report. DOCX text extraction is handled by `read_file`; source documents are not preloaded into the prompt.
 
@@ -174,7 +184,7 @@ sudo apt-get update
 sudo apt-get install -y file
 ```
 
-Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For an ARM host, use the Linux arm64 binary at `kit/box-mount/linux-arm64/box-mount`; the build script selects the host architecture.
+Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For an ARM host, put the Linux arm64 binary at `../sbx-kits-box/box-mount/linux-arm64/box-mount` instead; the upstream build script selects the host architecture.
 
 ### Tokens and authentication
 
@@ -188,4 +198,12 @@ On headless Linux without a keyring, Docker stores secrets under `~/.config/com.
 
 Check `sbx template ls` if the sandbox cannot find `sbx-box:local`. Check `sbx policy log box-contract-review` for blocked network requests while the sandbox exists. Edit files in place inside the mount; save-by-replacement can affect Box version history.
 
-See the [kit documentation](kit/README.md) for more detail. Keep the preview binary and images containing it private.
+If `sbx` rejects the GitHub source, check `sbx settings get kit.allowedSources` and the trusted-source step above. Do not use a wildcard to allow every publisher. If your organization manages this setting, ask its administrator to permit the upstream repository.
+
+See the [upstream kit documentation](https://github.com/ajeetraina/sbx-kits-box#readme) for build, publishing, and kit-specific troubleshooting. Keep the preview binary and images containing it private.
+
+### Updating or migrating the kit
+
+The upstream revision is pinned by `BOX_KIT_REVISION` in `src/sandbox.ts`. To upgrade, review the upstream changes, update that constant and the checkout revision in these instructions together, rebuild the template from the same commit, and recreate the sandbox. Updating the separate build checkout alone does not change the runtime kit reference.
+
+When upgrading from an older version of this demo, copy any private binary left in `kit/box-mount/` into the separate upstream checkout before deleting local leftovers. The old directory remains ignored by Git to protect those files; none of the code or build instructions depend on it.
