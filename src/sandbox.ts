@@ -3,11 +3,10 @@ import { promisify } from "node:util";
 import { relative, sep } from "node:path";
 import type { DemoConfig } from "./config.js";
 import { PROJECT_ROOT, SANDBOX_NAME } from "./config.js";
+import { BOX_KIT_REFERENCE, BOX_TEMPLATE } from "./box-kit.js";
+export { BOX_KIT_REFERENCE, BOX_KIT_REPOSITORY } from "./box-kit.js";
 
 const run = promisify(execFile);
-export const BOX_KIT_REPOSITORY = "https://github.com/ajeetraina/sbx-kits-box.git";
-export const BOX_KIT_REVISION = "897deef77ee6c7dedea81c600f5fbc3753eff550";
-export const BOX_KIT_REFERENCE = `git+${BOX_KIT_REPOSITORY}#ref=${BOX_KIT_REVISION}`;
 export const SANDBOX_TIMEOUT_MS = 60 * 60 * 1000;
 export const REMOTE_MOUNT_PATH = "/home/agent/workspace/box";
 export type Sandbox = {
@@ -23,7 +22,7 @@ export async function createDemoSandbox(
   _timeoutMs = SANDBOX_TIMEOUT_MS,
   launch: (args: string[]) => Promise<unknown> = sbx,
 ): Promise<Sandbox> {
-  await launch(["run", "--detached", "--name", SANDBOX_NAME, "--template", "sbx-box:local", "shell", "--kit", BOX_KIT_REFERENCE]);
+  await launch(["run", "--detached", "--name", SANDBOX_NAME, "--template", BOX_TEMPLATE, "shell", "--kit", BOX_KIT_REFERENCE]);
   return connectSandbox(SANDBOX_NAME);
 }
 export const connectSandbox = async (sandboxId: string): Promise<Sandbox> => ({

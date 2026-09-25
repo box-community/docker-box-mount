@@ -52,30 +52,25 @@ Fill in `BOX_ACCESS_TOKEN`, `BOX_FOLDER_ID`, and `OPENAI_API_KEY`. All three are
 
 Optionally set `OPENAI_MODEL` in `.env`. To assign the resulting memo to a person, set `BOX_REVIEWER_USER_ID` to their Box user ID; otherwise, task assignment is skipped.
 
-### 3. Build the Box Mount template
+### 3. Install the Box kit
 
-Clone the upstream [Box Kit](https://github.com/ajeetraina/sbx-kits-box) next to this project. From the `docker-box-mount` directory:
-
-```bash
-git clone https://github.com/ajeetraina/sbx-kits-box.git ../sbx-kits-box
-git -C ../sbx-kits-box checkout --detach 897deef77ee6c7dedea81c600f5fbc3753eff550
-mkdir -p ../sbx-kits-box/box-mount/linux
-cp /path/to/box-mount ../sbx-kits-box/box-mount/linux/box-mount
-chmod 0755 ../sbx-kits-box/box-mount/linux/box-mount
-(cd ../sbx-kits-box && ./scripts/build-and-load.sh)
-```
-
-The upstream script builds `sbx-box:local` and loads it into the sandbox runtime's image store. Nothing is pushed to a registry. The subshell returns you to the demo project for the remaining commands.
-
-The upstream [Dockerfile](https://github.com/ajeetraina/sbx-kits-box/blob/897deef77ee6c7dedea81c600f5fbc3753eff550/Dockerfile) packages the private Box Mount binary in a **template**. At sandbox creation, `sbx` fetches the upstream [kit specification](https://github.com/ajeetraina/sbx-kits-box/blob/897deef77ee6c7dedea81c600f5fbc3753eff550/spec.yaml) directly from GitHub to apply Box network rules and credential injection. This project does not bundle a kit; both references use the same pinned commit.
-
-On a fresh host, allow Docker Hub and this kit repository as [trusted kit sources](https://docs.docker.com/ai/sandboxes/customize/use-kits/#restrict-kit-sources):
+Allow the [Box Kit](https://github.com/ajeetraina/sbx-kits-box) as a trusted source on a fresh host:
 
 ```bash
 sbx settings set kit.allowedSources '["docker.io/","github.com/ajeetraina/sbx-kits-box"]'
 ```
 
-If you already customized `kit.allowedSources`, add this repository to your existing list instead of replacing it. Sandbox creation needs access to GitHub to resolve the kit.
+If you already customized `kit.allowedSources`, add this repository to your existing list instead of replacing it.
+
+Then install using your extracted Linux Box Mount executable:
+
+```bash
+npm run kit:install -- /path/to/box-mount
+```
+
+The installer checks the binary's architecture, fetches the upstream kit's default branch, and builds and loads `sbx-box:local` using its build script. It handles the temporary checkout and file layout; nothing is published, and your original binary is left untouched.
+
+The **template** supplies the private executable; the **kit** supplies network rules and credential injection. The demo attaches the kit directly from GitHub when creating a sandbox—no local kit checkout to maintain. Unlike kits that install public SDKs, Box Mount's private-preview binary still requires this one-time local build. [Installation details](#kit-installation-details) are in the appendix.
 
 ### 4. Register sandbox credentials
 
@@ -129,7 +124,7 @@ Reviewed/
 npm run demo
 ```
 
-The demo creates a sandbox from the local template and the pinned upstream GitHub kit, then mounts your Box folder at `/home/agent/workspace/box`.
+The demo creates a sandbox from the local template and the upstream GitHub kit, then mounts your Box folder at `/home/agent/workspace/box`.
 
 The agent receives a goal: **review the incoming contract against the approved playbook and save the findings**. It chooses its own sequence of `list_files`, `read_file`, and `write_file` calls, observes each result, and can correct errors or revise its report. DOCX text extraction is handled by `read_file`; source documents are not preloaded into the prompt.
 
@@ -194,7 +189,7 @@ sudo apt-get update
 sudo apt-get install -y file
 ```
 
-Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For an ARM host, put the Linux arm64 binary at `../sbx-kits-box/box-mount/linux-arm64/box-mount` instead; the upstream build script selects the host architecture.
+Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For an ARM host, pass the extracted Linux arm64 executable to the same `npm run kit:install -- /path/to/box-mount` command. The installer selects the layout automatically and rejects a mismatched binary before building.
 
 ### Tokens and authentication
 
@@ -214,6 +209,14 @@ See the [upstream kit documentation](https://github.com/ajeetraina/sbx-kits-box#
 
 ### Updating or migrating the kit
 
-The upstream revision is pinned by `BOX_KIT_REVISION` in `src/sandbox.ts`. To upgrade, review the upstream changes, update that constant and the checkout revision in these instructions together, rebuild the template from the same commit, and recreate the sandbox. Updating the separate build checkout alone does not change the runtime kit reference.
+Both the installer and sandbox launcher use the upstream repository's default branch without a revision pin. To refresh the template, rerun `npm run kit:install -- /path/to/box-mount` and recreate the sandbox. This rebuilds and replaces the local `sbx-box:local` template; it does not recreate existing sandboxes. The template is not automatically rebuilt when the upstream kit changes.
 
-When upgrading from an older version of this demo, copy any private binary left in `kit/box-mount/` into the separate upstream checkout before deleting local leftovers. The old directory remains ignored by Git to protect those files; none of the code or build instructions depend on it.
+If you previously used `kit/box-mount/` or a separate upstream checkout, you can pass the binary from that location to the installer. No existing checkout is modified or deleted. The old `kit/` directory remains ignored by Git to protect leftover private binaries.
+
+### Kit installation details
+
+`npm run kit:install` requires Git, `file`, a running Docker Engine, and an authenticated `sbx` installation. Supply an extracted Linux executable, not a `.tar.gz` archive or a macOS binary. It does not need Box or OpenAI credentials and does not read `.env`.
+
+The installer shallow-clones the upstream default branch into a private temporary directory, copies the binary into the appropriate architecture directory, and runs the upstream `scripts/build-and-load.sh`. That script builds the template, saves an image archive, and loads it into the sandbox runtime. The installer removes its temporary checkout and archive after success or a reported failure. The template remains in Docker and SBX; keep those image stores private.
+
+If installation fails, fix the reported error and rerun the same command; there is no persistent checkout to repair. See the [upstream build instructions](https://github.com/ajeetraina/sbx-kits-box#quick-start-local-only) for manual installation. Sandbox creation also requires GitHub access and the [trusted-source policy](https://docs.docker.com/ai/sandboxes/customize/use-kits/#restrict-kit-sources) configured above.

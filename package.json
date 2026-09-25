@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "kit:install": "tsx scripts/install-kit.ts",
     "setup": "tsx src/setup.ts",
     "doctor": "tsx src/doctor.ts",
     "seed": "tsx src/seed.ts",
