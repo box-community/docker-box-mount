@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "setup": "tsx src/setup.ts",
     "doctor": "tsx src/doctor.ts",
     "seed": "tsx src/seed.ts",
     "demo": "tsx src/demo.ts",

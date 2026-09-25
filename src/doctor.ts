@@ -56,7 +56,7 @@ main().catch((error: unknown) => {
     console.error(
       "\nDoctor failed:\nBox authentication failed. Your Developer Token " +
         "may have expired.\nGenerate a new token and update " +
-        "BOX_ACCESS_TOKEN in .env.",
+        "BOX_ACCESS_TOKEN in .env, then run npm run setup and retry.",
     );
   } else {
     console.error(`\nDoctor failed:\n${(error as Error).message}`);

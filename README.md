@@ -68,18 +68,12 @@ This project uses [`sbx-kits-box`](https://github.com/ajeetraina/sbx-kits-box). 
 ### 4. Register sandbox credentials
 
 ```bash
-sbx secret set box
+npm run setup
 ```
 
-Paste the same Box token you put in `.env`. The host scripts read `.env` for Box API calls; Box Mount uses the secret registered with `sbx`. Editing `.env` does not populate the sandbox secret store.
+This reads both tokens from `.env` and registers them with `sbx` through stdin—no second paste, token-bearing command arguments, or token logs. It creates or replaces the host-level `box` and `openai` service secrets, just like the manual `sbx secret set` commands. No sandbox is created by this step.
 
-Register the required OpenAI key as well:
-
-```bash
-sbx secret set openai
-```
-
-Paste your OpenAI API key. Docker's [credential proxy](https://docs.docker.com/ai/sandboxes/configuration/credentials/) replaces placeholder credentials on matching outbound requests. Seeing `proxy-managed` in a sandbox environment variable is expected.
+The host scripts use the Box token for account checks and optional task assignment. Inside the sandbox, Docker's [credential proxy](https://docs.docker.com/ai/sandboxes/configuration/credentials/) replaces placeholder credentials on matching outbound requests. Seeing `proxy-managed` in a sandbox environment variable is expected.
 
 ## Run
 
@@ -184,7 +178,7 @@ Install `curl`, `git`, or `ca-certificates` only if your image lacks them. For a
 
 ### Tokens and authentication
 
-Box Developer Tokens expire after approximately 60 minutes and cannot refresh themselves. Update `.env` and `sbx secret set box`, then recreate the demo sandbox. For OpenAI key changes, update `.env` and `sbx secret set openai`.
+Box Developer Tokens expire after approximately 60 minutes and cannot refresh themselves. Whenever either token changes, update it in `.env`, run `npm run setup`, and recreate the demo sandbox. Editing `.env` alone does not update the secret store. Setup validates both tokens are present before registering them; if one registration fails, fix the reported issue and rerun the command to register both again. Registration stores credentials; `npm run doctor` checks whether they work.
 
 An OpenAI error that names `proxy-managed` means the placeholder reached the API. Check the stored OpenAI secret and the request's use of Docker's credential proxy. An unavailable-model error should name your configured `OPENAI_MODEL`.
 

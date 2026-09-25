@@ -127,7 +127,7 @@ main().catch((error: unknown) => {
   ) {
     console.error(
       "\nDemo failed. A Developer Token or API key may have expired or be invalid.\n" +
-        "Refresh the relevant value in .env and retry.",
+        "Refresh the relevant value in .env, run npm run setup, and retry.",
     );
   } else {
     console.error(`\nDemo failed:\n${message}`);
